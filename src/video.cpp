@@ -966,7 +966,7 @@ namespace video {
       AV_PIX_FMT_P010,
       AV_PIX_FMT_NONE,
       AV_PIX_FMT_NONE,
-      vaapi_init_avcodec_hardware_input_buffer
+      vaapi_init_avcodec_hardware_input_buffer)
     ),
     {
       // Common options
@@ -1758,7 +1758,7 @@ namespace video {
                 av_dict_set(&options, option.name.c_str(), v->c_str(), 0);
               }
             },
-            [&](const std::function<const std::string(const config_t &cfg)> &v) {
+            [&](const std::function<const std::string (const config_t &)> &v) {
               av_dict_set(&options, option.name.c_str(), v(config).c_str(), 0);
             }
           },
@@ -1993,6 +1993,11 @@ namespace video {
       }
     }
 
+    // Log black frame mode status
+    if (config::video.black_frame_mode) {
+      BOOST_LOG(info) << "Black frame mode enabled - video output replaced with pure black frames"sv;
+    }
+
     while (true) {
       // Break out of the encoding loop if any of the following are true:
       // a) The stream is ending
@@ -2024,16 +2029,24 @@ namespace video {
 
       std::optional<std::chrono::steady_clock::time_point> frame_timestamp;
 
-      // Encode at a minimum FPS to avoid image quality issues with static content
-      if (!requested_idr_frame || images->peek()) {
-        if (auto img = images->pop(max_frametime)) {
-          frame_timestamp = img->frame_timestamp;
-          if (session->convert(*img)) {
-            BOOST_LOG(error) << "Could not convert image"sv;
-            return;
+      // Black frame mode: skip real frame capture to minimize bandwidth
+      // The dummy black frame loaded during initialization will be encoded repeatedly
+      if (config::video.black_frame_mode) {
+        // Control frame rate by sleeping for the max frame time
+        std::this_thread::sleep_for(max_frametime);
+      }
+      else {
+        // Encode at a minimum FPS to avoid image quality issues with static content
+        if (!requested_idr_frame || images->peek()) {
+          if (auto img = images->pop(max_frametime)) {
+            frame_timestamp = img->frame_timestamp;
+            if (session->convert(*img)) {
+              BOOST_LOG(error) << "Could not convert image"sv;
+              return;
+            }
+          } else if (!images->running()) {
+            break;
           }
-        } else if (!images->running()) {
-          break;
         }
       }
 
@@ -2232,6 +2245,11 @@ namespace video {
       return encode_e::error;
     }
 
+    // Log black frame mode status for sync mode
+    if (config::video.black_frame_mode) {
+      BOOST_LOG(info) << "Black frame mode enabled (sync) - video output replaced with pure black frames"sv;
+    }
+
     std::vector<sync_session_t> synced_sessions;
     for (auto &ctx : synced_session_ctxs) {
       auto synced_session = make_synced_session(disp.get(), encoder, *img, *ctx);
@@ -2240,6 +2258,86 @@ namespace video {
       }
 
       synced_sessions.emplace_back(std::move(*synced_session));
+    }
+
+    // Black frame mode: encode dummy black frames without screen capture
+    // This completely bypasses disp->capture() to avoid CPU/GPU overhead from screen capture
+    if (config::video.black_frame_mode) {
+      // Calculate frame time based on minimum FPS target
+      double minimum_fps_target = (config::video.minimum_fps_target > 0.0) ?
+        config::video.minimum_fps_target :
+        synced_session_ctxs.front()->config.framerate;
+      std::chrono::duration<double, std::milli> max_frametime {1000.0 / minimum_fps_target};
+
+      while (encode_session_ctx_queue.running()) {
+        // Handle new sessions joining
+        while (encode_session_ctx_queue.peek()) {
+          auto encode_session_ctx = encode_session_ctx_queue.pop();
+          if (!encode_session_ctx) {
+            break;
+          }
+
+          synced_session_ctxs.emplace_back(std::make_unique<sync_session_ctx_t>(std::move(*encode_session_ctx)));
+          auto encode_session = make_synced_session(disp.get(), encoder, *img, *synced_session_ctxs.back());
+          if (!encode_session) {
+            return encode_e::error;
+          }
+
+          synced_sessions.emplace_back(std::move(*encode_session));
+        }
+
+        if (synced_sessions.empty()) {
+          return encode_e::ok;
+        }
+
+        // Process each active session
+        for (auto pos = synced_sessions.begin(); pos != synced_sessions.end();) {
+          auto ctx = pos->ctx;
+
+          if (ctx->shutdown_event->peek()) {
+            // Let waiting thread know it can delete shutdown_event
+            ctx->join_event->raise(true);
+
+            pos = synced_sessions.erase(pos);
+            synced_session_ctxs.erase(std::find_if(std::begin(synced_session_ctxs), std::end(synced_session_ctxs), [&ctx_p = ctx](auto &ctx) {
+              return ctx.get() == ctx_p;
+            }));
+
+            if (synced_sessions.empty()) {
+              return encode_e::ok;
+            }
+
+            continue;
+          }
+
+          if (ctx->idr_events->peek()) {
+            pos->session->request_idr_frame();
+            ctx->idr_events->pop();
+          }
+
+          // Encode the pre-loaded dummy black frame (no convert needed)
+          if (encode(ctx->frame_nr++, *pos->session, ctx->packets, ctx->channel_data, {})) {
+            BOOST_LOG(error) << "Could not encode video packet"sv;
+            ctx->shutdown_event->raise(true);
+
+            continue;
+          }
+
+          pos->session->request_normal_frame();
+
+          ++pos;
+        }
+
+        // Match non-black path behavior by reinitializing when a display switch is requested
+        if (switch_display_event->peek()) {
+          return encode_e::reinit;
+        }
+
+        // Control frame rate by sleeping
+        std::this_thread::sleep_for(max_frametime);
+      }
+
+      return encode_e::ok;
     }
 
     auto ec = platf::capture_e::ok;

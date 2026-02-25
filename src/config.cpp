@@ -505,7 +505,9 @@ namespace config {
     },  // display_device
 
     0,  // max_bitrate
-    0  // minimum_fps_target (0 = framerate)
+    0,  // minimum_fps_target (0 = framerate)
+
+    false,  // black_frame_mode (disabled by default)
   };
 
   audio_t audio {
@@ -1137,13 +1139,16 @@ namespace config {
     bool_f(vars, "dd_config_revert_on_disconnect", video.dd.config_revert_on_disconnect);
     generic_f(vars, "dd_mode_remapping", video.dd.mode_remapping, dd::mode_remapping_from_view);
     {
-      int value = 0;
+      int value = std::numeric_limits<int>::min();
       int_between_f(vars, "dd_wa_hdr_toggle_delay", value, {0, 3000});
-      video.dd.wa.hdr_toggle_delay = std::chrono::milliseconds {value};
+      if (value >= 0) {
+        video.dd.wa.hdr_toggle_delay = std::chrono::milliseconds {value};
+      }
     }
 
     int_f(vars, "max_bitrate", video.max_bitrate);
     double_between_f(vars, "minimum_fps_target", video.minimum_fps_target, {0.0, 1000.0});
+    bool_f(vars, "black_frame_mode", video.black_frame_mode);
 
     path_f(vars, "pkey", nvhttp.pkey);
     path_f(vars, "cert", nvhttp.cert);

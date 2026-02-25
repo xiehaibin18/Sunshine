@@ -142,6 +142,10 @@ namespace config {
 
     int max_bitrate;  // Maximum bitrate, sets ceiling in kbps for bitrate requested from client
     double minimum_fps_target;  ///< Lowest framerate that will be used when streaming. Range 0-1000, 0 = half of client's requested framerate.
+
+    // Black frame mode: replace video output with pure black frames to minimize bandwidth
+    // Audio transmission and session management remain unaffected
+    bool black_frame_mode;
   };
 
   struct audio_t {
