@@ -1445,6 +1445,39 @@ editing the `conf` file in a text editor. Use the examples as reference.
     </tr>
 </table>
 
+### black_frame_mode
+
+<table>
+    <tr>
+        <td>Description</td>
+        <td colspan="2">
+            When enabled, Sunshine sends a black frame instead of a duplicate frame when the screen content
+            is static. This reduces bandwidth consumption while ensuring audio continues to transmit normally.
+        </td>
+    </tr>
+    <tr>
+        <td>Default</td>
+        <td colspan="2">@code{}
+            disabled
+            @endcode</td>
+    </tr>
+    <tr>
+        <td>Example</td>
+        <td colspan="2">@code{}
+            black_frame_mode = enabled
+            @endcode</td>
+    </tr>
+    <tr>
+        <td rowspan="2">Choices</td>
+        <td>disabled</td>
+        <td>Send duplicate frames when content is static.</td>
+    </tr>
+    <tr>
+        <td>enabled</td>
+        <td>Send black frames instead of duplicate frames to reduce bandwidth.</td>
+    </tr>
+</table>
+
 ## Network
 
 ### upnp
