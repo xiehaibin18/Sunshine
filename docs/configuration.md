@@ -3,7 +3,9 @@
 @admonition{ Host authority | @htmlonly
 By providing the host authority (URI + port), you can easily open each configuration option in the config UI.
 <br>
+
 <script src="configuration.js"></script>
+
 <strong>Host authority: </strong> <input type="text" id="host-authority" value="localhost:47990">
 @endhtmlonly
 }
@@ -14,6 +16,7 @@ The default location for the configuration file is listed below. You can use ano
 choose, by passing in the full configuration file path as the first argument when you start Sunshine.
 
 **Example**
+
 ```bash
 sunshine ~/sunshine_config.conf
 ```
@@ -24,7 +27,7 @@ location by modifying the configuration file.
 **Default Config Directory**
 
 | OS      | Location                                        |
-|---------|-------------------------------------------------|
+| ------- | ----------------------------------------------- |
 | Docker  | @code{}/config@endcode                          |
 | FreeBSD | @code{}~/.config/sunshine@endcode               |
 | Linux   | @code{}~/.config/sunshine@endcode               |
@@ -1284,7 +1287,6 @@ editing the `conf` file in a text editor. Use the examples as reference.
             @endcode</td>
     </tr>
 </table>
-
 
 ### dd_config_revert_on_disconnect
 
@@ -3054,7 +3056,7 @@ editing the `conf` file in a text editor. Use the examples as reference.
 <div class="section_buttons">
 
 | Previous          |                            Next |
-|:------------------|--------------------------------:|
+| :---------------- | ------------------------------: |
 | [Legal](legal.md) | [App Examples](app_examples.md) |
 
 </div>
