@@ -30,20 +30,15 @@ jobs:
             arch: x86_64
             msystem: ucrt64
             toolchain: ucrt-x86_64
-          - name: Windows-ARM64
-            os: windows-11-arm
-            arch: aarch64
-            msystem: clangarm64
-            toolchain: clang-aarch64
     steps:
       - name: Checkout
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           submodules: recursive
 
       - name: Setup Dependencies Windows
         # if a dependency needs to be pinned, see https://github.com/LizardByte/build-deps/pull/186
-        uses: msys2/setup-msys2@4f806de0a5a7294ffabaff804b38a9b435a73bda  # v2.30.0
+        uses: msys2/setup-msys2@4f806de0a5a7294ffabaff804b38a9b435a73bda # v2.30.0
         with:
           msystem: ${{ matrix.msystem }}
           update: true
@@ -142,17 +137,17 @@ jobs:
           # Clean up
           Remove-Item -Path doxygen-setup.exe
 
-      - name: Setup dotnet  # needed for wix
-        uses: actions/setup-dotnet@baa11fbfe1d6520db94683bd5c7a3818018e4309  # v5.1.0
+      - name: Setup dotnet # needed for wix
+        uses: actions/setup-dotnet@baa11fbfe1d6520db94683bd5c7a3818018e4309 # v5.1.0
         with:
-          dotnet-version: '10.x'
+          dotnet-version: "10.x"
 
       - name: Setup NodeJS
         # Clang compiled NodeJS has issues when running rollup webpack
         if: matrix.msystem != 'ucrt64'
-        uses: actions/setup-node@6044e13b5dc448c55e2357c09f80417699197238  # v6.2.0
+        uses: actions/setup-node@6044e13b5dc448c55e2357c09f80417699197238 # v6.2.0
         with:
-          node-version: 'lts/*'
+          node-version: "lts/*"
 
       - name: NodeJS Path
         if: matrix.msystem != 'ucrt64'
@@ -171,9 +166,9 @@ jobs:
 
       - name: Setup python
         id: setup-python
-        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405  # v6.2.0
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
         with:
-          python-version: '3.14'
+          python-version: "3.14"
 
       - name: Python Path
         id: python-path
@@ -271,7 +266,7 @@ jobs:
         if: >-
           always() &&
           (steps.test_report.outcome == 'success')
-        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f  # v6.0.0
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         with:
           name: coverage-${{ matrix.name }}
           path: |
@@ -294,7 +289,7 @@ jobs:
             a "../artifacts/Sunshine-${{ matrix.name }}-debuginfo.7z" "*.dbg"
 
       - name: Upload Artifacts
-        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f  # v6.0.0
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         with:
           name: build-${{ matrix.name }}
           path: artifacts/
